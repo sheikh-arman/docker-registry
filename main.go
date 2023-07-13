@@ -17,6 +17,7 @@ func main() {
 		panic(err)
 	}
 	listContainers(cli)
+	listImages(cli)
 	//Build(ctx, cli)
 	time.Sleep(time.Second * 3)
 }
@@ -26,9 +27,20 @@ func listContainers(cli *client.Client) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("as\n\n\n\n")
-	fmt.Println(containers, "\n\n")
+	fmt.Println("\n")
 	for _, container := range containers {
 		fmt.Printf("%s %s\n", container.ID, container.Image)
+	}
+}
+
+func listImages(cli *client.Client) {
+	images, err := cli.ImageList(context.Background(), types.ImageListOptions{})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Images\n\n")
+	for _, image := range images {
+		//fmt.Println(image)
+		fmt.Printf("\n%s %s\n", image.RepoTags, image.RepoDigests)
 	}
 }
