@@ -2,10 +2,7 @@ module github.com/sheikh-arman/docker-registry
 
 go 1.20
 
-require (
-	github.com/docker/docker v24.0.4+incompatible
-	github.com/moby/moby v24.0.4+incompatible
-)
+require github.com/docker/docker v20.10.20+incompatible
 
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
@@ -18,6 +15,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.6.0 // indirect
