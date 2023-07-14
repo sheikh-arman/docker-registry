@@ -34,7 +34,7 @@ func main() {
 func Build(ctx context.Context, cli *client.Client) {
 	buildOpts := types.ImageBuildOptions{
 		Dockerfile: DockerFileName,
-		Tags:       []string{"skaliarman/docker-registry:blue"},
+		Tags:       []string{"skaliarman/docker-registry:blue", "skaliarman/docker-registry2:blue"},
 		CacheFrom:  nil,
 	}
 
@@ -54,5 +54,6 @@ func Build(ctx context.Context, cli *client.Client) {
 	defer resp.Body.Close()
 
 	termFd, isTerm := term.GetFdInfo(os.Stderr)
+	fmt.Println(resp, " arman ", termFd, " ", isTerm)
 	jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
 }
