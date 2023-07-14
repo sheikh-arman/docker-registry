@@ -3,19 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
 
 func main() {
-	_, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 	defer cancel()
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
 	}
+	cli.NegotiateAPIVersion(ctx)
 	listContainers(cli)
 	listImages(cli)
 	//Build(ctx, cli)
