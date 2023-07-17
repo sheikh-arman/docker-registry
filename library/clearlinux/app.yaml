@@ -1,0 +1,12 @@
+Blocks:
+- Architectures: null
+  Directory: ""
+  GitCommit: 11a8acec1e58aab06d40c35dad429daa6518d532
+  Tags:
+  - latest
+  - base
+GitRepo: https://github.com/clearlinux/docker-brew-clearlinux.git
+KnownTags:
+  base: {}
+  latest: {}
+Name: clearlinux

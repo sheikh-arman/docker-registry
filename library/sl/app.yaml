@@ -1,0 +1,20 @@
+Blocks:
+- Architectures:
+  - amd64
+  Directory: sl7
+  GitCommit: 8a6f60fae85c0e665fcd3388a21a850e82a56c70
+  Tags:
+  - "7"
+  - latest
+- Architectures:
+  - amd64
+  Directory: sl6
+  GitCommit: cee76508f6b6a7f83842d944d687366ca99f78c9
+  Tags:
+  - "6"
+GitRepo: https://github.com/scientificlinux/sl-docker.git
+KnownTags:
+  "6": {}
+  "7": {}
+  latest: {}
+Name: sl

@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"gomodules.xyz/semvers"
 	"gomodules.xyz/sets"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
 )
 
@@ -23,15 +24,15 @@ import (
 func main() {
 
 	apps := map[string]AppHistory{}
-	outDir := "./library"
+	//outDir := "./library"
 
 	err := ProcessGitRepo(apps, true)
 	CheckIfError(err)
 
-	err = PrintUnifiedHistory(outDir, apps)
-	if err != nil {
+	//err = PrintUnifiedHistory(outDir, apps)
+	/*if err != nil {
 		panic(err)
-	}
+	}*/
 }
 
 func ProcessGitRepo(apps map[string]AppHistory, fullHistory bool) error {
@@ -92,7 +93,7 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 				return err
 			}
 
-			klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
+			//klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
 
 			h, found := apps[app.Name]
 			if !found {
@@ -424,7 +425,7 @@ func ParseLibraryFileContent(appName string, lines []string) (*App, error) {
 			}
 			curBlock.Directory = parts[0]
 		default:
-			klog.V(5).cc.InfoS("ignoring property", before, after)
+			klog.V(5).InfoS("ignoring property", before, after)
 		}
 	}
 

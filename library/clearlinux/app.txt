@@ -1,0 +1,4 @@
+GitRepo: https://github.com/clearlinux/docker-brew-clearlinux.git
+
+Tags: latest,base
+GitCommit: 11a8acec1e58aab06d40c35dad429daa6518d532
