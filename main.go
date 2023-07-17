@@ -2,17 +2,27 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/Masterminds/semver/v3"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/go-git/go-git/v5"
 	. "github.com/go-git/go-git/v5/_examples"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/moby/term"
 	"github.com/pkg/errors"
-	build "github.com/sheikh-arman/docker-registry/build-image"
+	_ "github.com/sheikh-arman/docker-registry/buildimage"
 	"gomodules.xyz/semvers"
 	"gomodules.xyz/sets"
+	"io"
 	"k8s.io/klog/v2"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/yaml"
@@ -93,10 +103,18 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 				return err
 			}
 
-			for _, b := range app.Blocks {
-				err = build.buildImage("sdgfg", "asjhdu")
+			/*for _, b := range app.Blocks {
+
+				var dockerUrl string
+				dockerUrl=app.GitRepo
+				fmt.Println(app)
+
+				buildImage("sdgfg", "asjhdu")
+				fmt.Println(b)
 				CheckIfError(err)
-			}
+			}*/
+			fmt.Println(app, "\n\n")
+			fmt.Println(app.Blocks, "\n\n")
 			klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
 
 			/*h, found := apps[app.Name]
@@ -455,4 +473,90 @@ func filter(in []string) []string {
 		}
 	}
 	return out
+}
+
+const (
+	DockerFileName = "Dockerfile"
+	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/buildimage/"
+)
+
+func buildImage(DockerFileURL string, tag string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+	defer cancel()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		panic(err)
+	}
+	cli.NegotiateAPIVersion(ctx)
+	Build(ctx, cli, DockerFileURL, tag)
+	time.Sleep(time.Second * 3)
+}
+
+func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag string) {
+
+	downloadDocker(DockerFileURL)
+
+	buildOpts := types.ImageBuildOptions{
+		Dockerfile: DockerFileName,
+		Tags:       []string{tag},
+		CacheFrom:  nil,
+	}
+
+	buildCtx, err := archive.TarWithOptions(DockerFilePath, &archive.TarOptions{
+		IncludeFiles: []string{
+			DockerFileName,
+		},
+	})
+	if err != nil {
+		fmt.Println("error on TarWithOptions func ", err)
+	}
+
+	resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
+	if err != nil {
+		log.Fatalf("build error huuu- %s", err)
+	}
+	defer resp.Body.Close()
+
+	termFd, isTerm := term.GetFdInfo(os.Stderr)
+	//fmt.Println(resp, " arman ", termFd, " ", isTerm)
+	jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
+}
+
+func downloadDocker(fileURL string) {
+	//fileURL := "https://raw.githubusercontent.com/TimWolla/docker-adminer/c9c54b18f79a66409a3153a94f629ea68f08647c/4/Dockerfile"
+	localFilePath := DockerFilePath
+
+	err := downloadFile(fileURL, localFilePath)
+	if err != nil {
+		fmt.Println("Error downloading file")
+		return
+	}
+	fmt.Println("File Downloaded successfully")
+
+	fmt.Println(fileURL, localFilePath)
+
+}
+
+func downloadFile(url, filePath string) error {
+	filePath += "Dockerfile"
+	outFile, err := os.Create(filePath)
+	if err != nil {
+		fmt.Println(err, "culprit ? ")
+		return err
+	}
+	defer outFile.Close()
+	response, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download file, status code: %d", response.StatusCode)
+	}
+	_, err = io.Copy(outFile, response.Body)
+	if err != nil {
+		return err
+	}
+	return nil
 }

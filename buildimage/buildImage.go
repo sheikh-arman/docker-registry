@@ -1,4 +1,4 @@
-package main
+package buildimage
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 
 const (
 	DockerFileName = "Dockerfile"
-	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/build-image/"
+	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/buildimage/"
 )
 
 func buildImage(DockerFileURL string, tag string) {
