@@ -3,21 +3,21 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
 	. "github.com/go-git/go-git/v5/_examples"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/pkg/errors"
+	build "github.com/sheikh-arman/docker-registry/build-image"
 	"gomodules.xyz/semvers"
 	"gomodules.xyz/sets"
 	"k8s.io/klog/v2"
+	"os"
+	"path/filepath"
 	"sigs.k8s.io/yaml"
+	"strings"
+	"time"
 )
 
 // Read from Git directly
@@ -93,9 +93,13 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 				return err
 			}
 
-			//klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
+			for _, b := range app.Blocks {
+				err = build.buildImage("sdgfg", "asjhdu")
+				CheckIfError(err)
+			}
+			klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
 
-			h, found := apps[app.Name]
+			/*h, found := apps[app.Name]
 			if !found {
 				h = AppHistory{
 					Name:      app.Name,
@@ -105,7 +109,7 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 				}
 			}
 			GatherHistory(&h, app)
-			apps[app.Name] = h
+			apps[app.Name] = h*/
 
 			return nil
 		})
@@ -265,6 +269,7 @@ func ProcessRepo(apps map[string]AppHistory, dir string) error {
 
 		filename := filepath.Join(dir, entry.Name())
 		app, err := ParseLibraryFile(filename)
+
 		if err != nil || app == nil {
 			return err
 		}
@@ -282,7 +287,6 @@ func ProcessRepo(apps map[string]AppHistory, dir string) error {
 		GatherHistory(&h, app)
 		apps[app.Name] = h
 	}
-
 	return nil
 }
 
