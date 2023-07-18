@@ -1,21 +1,27 @@
-FROM alpine:3.15
+FROM erlang:22-slim
 
-ARG version=8.372.07.1
+# elixir expects utf8.
+ENV ELIXIR_VERSION="v1.9.4" \
+	LANG=C.UTF-8
 
-# Please note that the THIRD-PARTY-LICENSE could be out of date if the base image has been updated recently.
-# The Corretto team will update this file but you may see a few days' delay.
-RUN wget -O /THIRD-PARTY-LICENSES-20200824.tar.gz https://corretto.aws/downloads/resources/licenses/alpine/THIRD-PARTY-LICENSES-20200824.tar.gz && \
-    echo "82f3e50e71b2aee21321b2b33de372feed5befad6ef2196ddec92311bc09becb  /THIRD-PARTY-LICENSES-20200824.tar.gz" | sha256sum -c - && \
-    tar x -ovzf THIRD-PARTY-LICENSES-20200824.tar.gz && \
-    rm -rf THIRD-PARTY-LICENSES-20200824.tar.gz && \
-    wget -O /etc/apk/keys/amazoncorretto.rsa.pub https://apk.corretto.aws/amazoncorretto.rsa.pub && \
-    SHA_SUM="6cfdf08be09f32ca298e2d5bd4a359ee2b275765c09b56d514624bf831eafb91" && \
-    echo "${SHA_SUM}  /etc/apk/keys/amazoncorretto.rsa.pub" | sha256sum -c - && \
-    echo "https://apk.corretto.aws" >> /etc/apk/repositories && \
-    apk add --no-cache amazon-corretto-8-jre=$version-r0 && \
-    rm -rf /usr/lib/jvm/java-8-amazon-corretto/lib/src.zip
+RUN set -xe \
+	&& ELIXIR_DOWNLOAD_URL="https://github.com/elixir-lang/elixir/archive/${ELIXIR_VERSION}.tar.gz" \
+	&& ELIXIR_DOWNLOAD_SHA256="f3465d8a8e386f3e74831bf9594ee39e6dfde6aa430fe9260844cfe46aa10139" \
+	&& buildDeps=' \
+		ca-certificates \
+		curl \
+		make \
+	' \
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends $buildDeps \
+	&& curl -fSL -o elixir-src.tar.gz $ELIXIR_DOWNLOAD_URL \
+	&& echo "$ELIXIR_DOWNLOAD_SHA256  elixir-src.tar.gz" | sha256sum -c - \
+	&& mkdir -p /usr/local/src/elixir \
+	&& tar -xzC /usr/local/src/elixir --strip-components=1 -f elixir-src.tar.gz \
+	&& rm elixir-src.tar.gz \
+	&& cd /usr/local/src/elixir \
+	&& make install clean \
+	&& apt-get purge -y --auto-remove $buildDeps \
+	&& rm -rf /var/lib/apt/lists/*
 
-
-ENV LANG C.UTF-8
-
-ENV JAVA_HOME=/usr/lib/jvm/default-jvm/jre
+CMD ["iex"]

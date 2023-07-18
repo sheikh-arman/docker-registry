@@ -102,6 +102,8 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 			if err != nil || app == nil {
 				return err
 			}
+
+			//Start Docker Image Build
 			repoUrl := app.GitRepo
 			gitHub := "https://github.com/"
 			repoUrl = repoUrl[len(gitHub) : len(repoUrl)-4]
@@ -164,6 +166,8 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 					}
 				}
 				fmt.Println(Tags, " Done")
+				/// End Docker Image Build
+
 				/*var dockerUrl string
 
 				dockerUrl = app.GitRepo
