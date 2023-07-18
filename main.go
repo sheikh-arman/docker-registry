@@ -38,7 +38,7 @@ func main() {
 
 	err := ProcessGitRepo(apps, true)
 	CheckIfError(err)
-
+	//buildImage("https://raw.githubusercontent.com/aerospike/aerospike-server.docker/fe338f8af95f2b20e4a6db3aa2d29a6d3373a2ff/enterprise/debian11/Dockerfile", "aerospike:ll")
 	//err = PrintUnifiedHistory(outDir, apps)
 	/*if err != nil {
 		panic(err)
@@ -102,20 +102,81 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 			if err != nil || app == nil {
 				return err
 			}
+			repoUrl := app.GitRepo
+			gitHub := "https://github.com/"
+			repoUrl = repoUrl[len(gitHub) : len(repoUrl)-4]
 
-			/*for _, b := range app.Blocks {
+			url := "https://raw.githubusercontent.com/"
+			url += repoUrl
+			url += "/"
 
-				var dockerUrl string
-				dockerUrl=app.GitRepo
+			for _, b := range app.Blocks {
+
+				tags := b.Tags
+				var Tags []string
+				for _, tag := range tags {
+					imageName := file.Name
+					imageName = imageName[8:]
+					conTag := imageName
+					conTag += ":"
+					conTag += tag
+					Tags = append(Tags, conTag)
+					//fmt.Println(b)
+					//CheckIfError(err)
+				}
+
+				urlBlock := url
+				if len(b.Directory) == 0 {
+					if len(b.GitCommit) == 0 {
+						urlBlock1 := urlBlock
+						urlBlock2 := urlBlock
+						urlBlock1 += "main"
+						urlBlock2 += "master"
+						urlBlock1 += "/Dockerfile"
+						urlBlock2 += "/Dockerfile"
+						buildImage(urlBlock1, Tags)
+						buildImage(urlBlock2, Tags)
+					} else {
+						urlBlock1 := urlBlock
+						urlBlock1 += b.GitCommit
+						urlBlock1 += "/Dockerfile"
+						buildImage(urlBlock1, Tags)
+					}
+				} else {
+					if len(b.GitCommit) == 0 {
+						urlBlock1 := urlBlock
+						urlBlock2 := urlBlock
+						urlBlock1 += "main/"
+						urlBlock2 += "master/"
+						urlBlock1 += b.Directory
+						urlBlock2 += b.Directory
+						urlBlock1 += "/Dockerfile"
+						urlBlock2 += "/Dockerfile"
+						buildImage(urlBlock1, Tags)
+						buildImage(urlBlock2, Tags)
+					} else {
+						urlBlock1 := urlBlock
+						urlBlock1 += b.GitCommit
+						urlBlock1 += "/"
+						urlBlock1 += b.Directory
+						urlBlock1 += "/Dockerfile"
+						buildImage(urlBlock1, Tags)
+					}
+				}
+				fmt.Println(Tags, " Done")
+				/*var dockerUrl string
+
+				dockerUrl = app.GitRepo
 				fmt.Println(app)
 
 				buildImage("sdgfg", "asjhdu")
 				fmt.Println(b)
-				CheckIfError(err)
-			}*/
-			fmt.Println(app, "\n\n")
-			fmt.Println(app.Blocks, "\n\n")
-			klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
+				CheckIfError(err)*/
+			}
+			/*	fmt.Println(app.GitRepo, "\n\n")
+				fmt.Println(repoUrl, "\n\n")
+				fmt.Println(app.Blocks, "\n\n")
+				klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))*/
 
 			/*h, found := apps[app.Name]
 			if !found {
@@ -480,7 +541,7 @@ const (
 	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/buildimage/"
 )
 
-func buildImage(DockerFileURL string, tag string) {
+func buildImage(DockerFileURL string, tag []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 	defer cancel()
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -492,13 +553,15 @@ func buildImage(DockerFileURL string, tag string) {
 	time.Sleep(time.Second * 3)
 }
 
-func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag string) {
+func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag []string) {
 
-	downloadDocker(DockerFileURL)
-
+	err := downloadDocker(DockerFileURL)
+	if err != nil {
+		return
+	}
 	buildOpts := types.ImageBuildOptions{
 		Dockerfile: DockerFileName,
-		Tags:       []string{tag},
+		Tags:       tag,
 		CacheFrom:  nil,
 	}
 
@@ -515,26 +578,25 @@ func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag st
 	if err != nil {
 		log.Fatalf("build error huuu- %s", err)
 	}
-	defer resp.Body.Close()
 
 	termFd, isTerm := term.GetFdInfo(os.Stderr)
 	//fmt.Println(resp, " arman ", termFd, " ", isTerm)
 	jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
 }
 
-func downloadDocker(fileURL string) {
+func downloadDocker(fileURL string) error {
 	//fileURL := "https://raw.githubusercontent.com/TimWolla/docker-adminer/c9c54b18f79a66409a3153a94f629ea68f08647c/4/Dockerfile"
 	localFilePath := DockerFilePath
-
+	fmt.Println(fileURL)
 	err := downloadFile(fileURL, localFilePath)
 	if err != nil {
 		fmt.Println("Error downloading file")
-		return
+		return err
 	}
 	fmt.Println("File Downloaded successfully")
 
 	fmt.Println(fileURL, localFilePath)
-
+	return nil
 }
 
 func downloadFile(url, filePath string) error {

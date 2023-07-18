@@ -13,3 +13,5 @@ http.Request()
 https://github.com/TimWolla/docker-adminer/blob/c9c54b18f79a66409a3153a94f629ea68f08647c/4/Dockerfile
 
 https://raw.githubusercontent.com/TimWolla/docker-adminer/c9c54b18f79a66409a3153a94f629ea68f08647c/4/Dockerfile
+
+https://raw.githubusercontent.com/aerospike/aerospike-server.docker/fe338f8af95f2b20e4a6db3aa2d29a6d3373a2ff/enterprise/debian11/Dockerfile
