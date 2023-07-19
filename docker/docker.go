@@ -21,7 +21,7 @@ const (
 	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/buildimage/"
 )
 
-func buildImage(DockerFileURL string, tag []string) {
+func BuildImage(DockerFileURL string, tag []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 	defer cancel()
 	cli, err := client.NewClientWithOpts(client.FromEnv)
