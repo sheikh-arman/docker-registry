@@ -18,7 +18,7 @@ import (
 
 const (
 	DockerFileName = "Dockerfile"
-	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/buildimage/"
+	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/docker/"
 )
 
 func BuildImage(DockerFileURL string, tag []string) {
