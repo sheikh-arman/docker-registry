@@ -103,7 +103,6 @@ func BuildImage(DockerFileURL string, tag []string) {
 func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag []string) {
 
 	err := downloadDocker(DockerFileURL)
-	return
 	if err != nil {
 		return
 	}
