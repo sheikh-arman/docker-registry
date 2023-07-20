@@ -18,7 +18,7 @@ import (
 
 const (
 	DockerFileName = "Dockerfile"
-	DockerFilePath = "arman/"
+	DockerFilePath = "dockerdocker/"
 )
 
 func initBuild(app *App, file *object.File) {
@@ -127,7 +127,7 @@ func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag []
 	}
 
 	termFd, isTerm := term.GetFdInfo(os.Stderr)
-	//fmt.Println(resp, " arman ", termFd, " ", isTerm)
+	//fmt.Println(resp, " docker ", termFd, " ", isTerm)
 	jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
 }
 
