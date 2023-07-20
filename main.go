@@ -95,7 +95,7 @@ func ProcessCommit(apps map[string]AppHistory) func(c *object.Commit) error {
 			// Build Docker Image
 			initBuild(app, file)
 
-			klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
+			//klog.InfoS("processed", "commit", c.ID(), "file", file.Name, "blocks", len(app.Blocks))
 
 			h, found := apps[app.Name]
 			if !found {
