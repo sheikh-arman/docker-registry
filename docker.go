@@ -18,7 +18,7 @@ import (
 
 const (
 	DockerFileName = "Dockerfile"
-	DockerFilePath = "/arman/"
+	DockerFilePath = "arman/"
 )
 
 func initBuild(app *App, file *object.File) {
