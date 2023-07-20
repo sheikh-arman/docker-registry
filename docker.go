@@ -1,4 +1,4 @@
-package docker
+package main
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/moby/term"
-	_ "github.com/sheikh-arman/docker-registry/buildimage"
 	"io"
 	"log"
 	"net/http"
@@ -18,8 +18,75 @@ import (
 
 const (
 	DockerFileName = "Dockerfile"
-	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/docker/"
+	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry"
 )
+
+func initBuild(app *App, file *object.File) {
+	repoUrl := app.GitRepo
+	gitHub := "https://github.com/"
+	repoUrl = repoUrl[len(gitHub) : len(repoUrl)-4]
+
+	url := "https://raw.githubusercontent.com/"
+	url += repoUrl
+	url += "/"
+
+	for _, b := range app.Blocks {
+
+		tags := b.Tags
+		var Tags []string
+		for _, tag := range tags {
+			imageName := file.Name
+			imageName = imageName[8:]
+			conTag := imageName
+			conTag += ":"
+			conTag += tag
+			Tags = append(Tags, conTag)
+		}
+
+		urlBlock := url
+		if len(b.Directory) == 0 {
+			if len(b.GitCommit) == 0 {
+				urlMain := urlBlock
+				urlMain += "main"
+				urlMain += "/Dockerfile"
+				BuildImage(urlMain, Tags)
+
+				urlMaster := urlBlock
+				urlMaster += "master"
+				urlMaster += "/Dockerfile"
+				BuildImage(urlMaster, Tags)
+			} else {
+				urlCommit := urlBlock
+				urlCommit += b.GitCommit
+				urlCommit += "/Dockerfile"
+				BuildImage(urlCommit, Tags)
+			}
+		} else {
+			if len(b.GitCommit) == 0 {
+				urlMain := urlBlock
+				urlMain += "main/"
+				urlMain += b.Directory
+				urlMain += "/Dockerfile"
+				BuildImage(urlMain, Tags)
+
+				urlMaster := urlBlock
+				urlMaster += "master/"
+				urlMaster += b.Directory
+				urlMaster += "/Dockerfile"
+				BuildImage(urlMaster, Tags)
+			} else {
+				urlCommit := urlBlock
+				urlCommit += b.GitCommit
+				urlCommit += "/"
+				urlCommit += b.Directory
+				urlCommit += "/Dockerfile"
+				BuildImage(urlCommit, Tags)
+			}
+		}
+		fmt.Println(Tags, " Done")
+		/// End Docker Image Build
+	}
+}
 
 func BuildImage(DockerFileURL string, tag []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
@@ -83,16 +150,13 @@ func downloadFile(url, filePath string) error {
 	filePath += "Dockerfile"
 	outFile, err := os.Create(filePath)
 	if err != nil {
-		fmt.Println(err, "culprit ? ")
+		//fmt.Println(err, "culprit ? ")
 		return err
 	}
-	defer outFile.Close()
 	response, err := http.Get(url)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
-
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download file, status code: %d", response.StatusCode)
 	}
