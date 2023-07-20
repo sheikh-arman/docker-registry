@@ -18,7 +18,7 @@ import (
 
 const (
 	DockerFileName = "Dockerfile"
-	DockerFilePath = "/home/user/go/src/github.com/sheikh-arman/docker-registry/"
+	DockerFilePath = "~/"
 )
 
 func initBuild(app *App, file *object.File) {
