@@ -103,6 +103,7 @@ func BuildImage(DockerFileURL string, tag []string) {
 func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag []string) {
 
 	err := downloadDocker(DockerFileURL)
+	return
 	if err != nil {
 		return
 	}
@@ -134,7 +135,7 @@ func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag []
 func downloadDocker(fileURL string) error {
 	//fileURL := "https://raw.githubusercontent.com/TimWolla/docker-adminer/c9c54b18f79a66409a3153a94f629ea68f08647c/4/Dockerfile"
 	localFilePath := DockerFilePath
-	fmt.Println(fileURL)
+	fmt.Println(fileURL, " ", localFilePath)
 	err := downloadFile(fileURL, localFilePath)
 	if err != nil {
 		fmt.Println("Error downloading file")
