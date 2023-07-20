@@ -18,7 +18,7 @@ import (
 
 const (
 	DockerFileName = "Dockerfile"
-	DockerFilePath = "~/arman/"
+	DockerFilePath = "/arman/"
 )
 
 func initBuild(app *App, file *object.File) {
@@ -151,7 +151,7 @@ func downloadFile(url, filePath string) error {
 	filePath += "Dockerfile"
 	outFile, err := os.Create(filePath)
 	if err != nil {
-		//fmt.Println(err, "culprit ? ")
+		fmt.Println(err, "culprit ? ")
 		return err
 	}
 	response, err := http.Get(url)
