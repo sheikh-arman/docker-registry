@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +23,8 @@ import (
 
 // Read from Git directly
 func main() {
-	apps := map[string]AppHistory{}
+	fmt.Println("hi")
+	/*apps := map[string]AppHistory{}
 	outDir := "./library"
 
 	err := ProcessGitRepo(apps, true)
@@ -31,7 +33,7 @@ func main() {
 	err = PrintUnifiedHistory(outDir, apps)
 	if err != nil {
 		panic(err)
-	}
+	}*/
 }
 
 func ProcessGitRepo(apps map[string]AppHistory, fullHistory bool) error {
