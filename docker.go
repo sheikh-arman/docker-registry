@@ -2,33 +2,23 @@ package main
 
 import (
 	"bufio"
-	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/moby/term"
 	"io"
-	"k8s.io/klog/v2"
-	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 const (
-	DockerFileName = "Dockerfile"
-	DockerFilePath = "docker/"
+	DockerFileName   = "Dockerfile"
+	DockerFilePath   = "docker/"
+	RemoteRepository = "ghcr.io/sheikh-arman/"
 )
 
 var (
 	kubeDB = map[string]int{
 		"elasticsearch": 1,
-		"mariadb":       1,
+		/*"mariadb":       1,
 		"memcached":     1,
 		"mongo":         1,
 		"mysql":         1,
@@ -39,13 +29,29 @@ var (
 		"kafka":     1,
 		"xtradb":    1,
 		"pgbouncer": 1,
-		"proxysql":  1,
+		"proxysql":  1,*/
 	}
+	currentTag = map[string]int{}
 )
 
-func initBuild(app App, imagename string) {
-	fmt.Println(app)
-
+func init() {
+	configRemoteRepo()
+	currentTagList()
+}
+func currentTagList() {
+	openFile, err := os.OpenFile("taglist.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return
+	}
+	scanner := bufio.NewScanner(openFile)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		currentTag[line] = 1
+	}
+}
+func initBuild(app *App, imageName string) {
+	//fmt.Println(app)
 	repoUrl := app.GitRepo
 	gitHub := "https://github.com/"
 	repoUrl = repoUrl[len(gitHub) : len(repoUrl)-4]
@@ -55,35 +61,33 @@ func initBuild(app App, imagename string) {
 	url += "/"
 
 	for _, b := range app.Blocks {
-
 		tags := b.Tags
 		var Tags []string
 		for _, tag := range tags {
-			imageName := imagename
-			imageName = "ghcr.io/sheikh-arman/" + imageName[8:]
+			imageName := imageName
+			imageName = RemoteRepository + imageName[8:]
 			conTag := imageName
 			conTag += ":"
 			conTag += tag
 			Tags = append(Tags, conTag)
 		}
-
 		urlBlock := url
 		if len(b.Directory) == 0 {
 			if len(b.GitCommit) == 0 {
 				urlMain := urlBlock
 				urlMain += "main"
 				urlMain += "/Dockerfile"
-				BuildImage(urlMain, Tags)
+				BuildImage(urlMain, Tags, imageName)
 
 				urlMaster := urlBlock
 				urlMaster += "master"
 				urlMaster += "/Dockerfile"
-				BuildImage(urlMaster, Tags)
+				BuildImage(urlMaster, Tags, imageName)
 			} else {
 				urlCommit := urlBlock
 				urlCommit += b.GitCommit
 				urlCommit += "/Dockerfile"
-				BuildImage(urlCommit, Tags)
+				BuildImage(urlCommit, Tags, imageName)
 			}
 		} else {
 			if len(b.GitCommit) == 0 {
@@ -91,51 +95,33 @@ func initBuild(app App, imagename string) {
 				urlMain += "main/"
 				urlMain += b.Directory
 				urlMain += "/Dockerfile"
-				BuildImage(urlMain, Tags)
+				BuildImage(urlMain, Tags, imageName)
 
 				urlMaster := urlBlock
 				urlMaster += "master/"
 				urlMaster += b.Directory
 				urlMaster += "/Dockerfile"
-				BuildImage(urlMaster, Tags)
+				BuildImage(urlMaster, Tags, imageName)
 			} else {
 				urlCommit := urlBlock
 				urlCommit += b.GitCommit
 				urlCommit += "/"
 				urlCommit += b.Directory
 				urlCommit += "/Dockerfile"
-				BuildImage(urlCommit, Tags)
+				BuildImage(urlCommit, Tags, imageName)
 			}
 		}
-
 		/// End Docker Image Build
 	}
 }
 
-func BuildImage(DockerFileURL string, tag []string) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
-	defer cancel()
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		panic(err)
-	}
-	cli.NegotiateAPIVersion(ctx)
-
-	svr, err := cli.ServerVersion(context.TODO())
-	if err != nil {
-		panic(err)
-	}
-	klog.Infof("%s +++++++++++  %+v \n", cli.ClientVersion(), svr)
-	Build(ctx, cli, DockerFileURL, tag)
-	time.Sleep(time.Second * 3)
-}
-
-func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag []string) {
-
+func BuildImage(DockerFileURL string, tag []string, imageName string) {
 	for _, dockerTag := range tag {
-		if !checkTag(dockerTag) {
+		fmt.Println(dockerTag, currentTag[dockerTag], " huh")
+		if currentTag[dockerTag] == 1 {
 			continue
 		}
+		fmt.Println("not Working")
 		err := downloadDocker(DockerFileURL, DockerFileName)
 		if err != nil {
 			return
@@ -145,37 +131,22 @@ func Build(ctx context.Context, cli *client.Client, DockerFileURL string, tag []
 		if err != nil {
 			return
 		}
-		buildContext, err := os.Open(DockerFilePath) // Set the correct working directory here
+		args := []interface{}{
+			"build",
+			"-t",
+			dockerTag,
+			DockerFilePath,
+		}
+		data, err := sh.Command("docker", args...).Output()
 		if err != nil {
+			fmt.Println(err)
 			return
 		}
-		defer buildContext.Close()
-		buildCtx, err := archive.TarWithOptions(DockerFilePath, &archive.TarOptions{
-			IncludeFiles: Files,
-		})
-		if err != nil {
-			fmt.Println("error on TarWithOptions func ", err)
-		}
-		buildOpts := types.ImageBuildOptions{
-			//Context:    buildCtx,
-			Dockerfile: DockerFileName,
-			Tags:       []string{dockerTag},
-			CacheFrom:  nil,
-		}
-
-		resp, err := cli.ImageBuild(ctx, buildCtx, buildOpts)
-		if err != nil {
-			log.Fatalf("build error huuu- %s", err)
-		}
-
-		termFd, isTerm := term.GetFdInfo(os.Stderr)
-
-		//_, err = io.Copy(os.Stdout, resp.Body)
-		jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stderr, termFd, isTerm, nil)
-
-		pushImage(cli, ctx, dockerTag)
-		deleteImage(ctx, cli, dockerTag)
-
+		fmt.Println(string(data))
+		reportVul(dockerTag, imageName)
+		pushImage(dockerTag)
+		deleteImage(dockerTag)
+		addTag(dockerTag)
 	}
 }
 
@@ -190,12 +161,10 @@ func downloadDocker(url, fileName string) error {
 	}
 	fmt.Println(url, localFilePath)
 	fmt.Println("File Downloaded successfully")
-
 	return nil
 }
 
 func downloadFile(url, filePath string) error {
-	//filePath += "Dockerfile"
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -216,7 +185,6 @@ func downloadFile(url, filePath string) error {
 func createAssociatedFile(DockerFileUrl string) ([]string, error) {
 	localFilePath := DockerFilePath
 	localFilePath += "Dockerfile"
-
 	openFile, err := os.Open(localFilePath)
 	if err != nil {
 		return []string{}, err
@@ -226,12 +194,9 @@ func createAssociatedFile(DockerFileUrl string) ([]string, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		line = strings.TrimSpace(line)
-
 		if strings.HasPrefix(line, "COPY") || strings.HasPrefix(line, "ADD") {
-			//fmt.Println(line, " #check")
 			words := strings.Split(line, " ")
 			listFiles = append(listFiles, words[1])
-			//fmt.Println(words[0], " tut ", words[1])
 		}
 	}
 	for _, listFile := range listFiles {
@@ -242,62 +207,98 @@ func createAssociatedFile(DockerFileUrl string) ([]string, error) {
 	}
 	return listFiles, nil
 }
-func pushImage(cli *client.Client, ctx context.Context, imageName string) {
-
-	//imageName := "ghcr.io/sheikh-arman/hello:lastest"
-	username := "sheikh-arman"
-	//token := "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"
-	token := "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"
-	//password := "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"
-
-	authConfig := types.AuthConfig{
-		Username:      username,
-		Password:      token,
-		ServerAddress: "ghcr.io",
+func reportVul(dockerTag, imageName string) {
+	imageName = imageName[8:]
+	repo := RemoteRepository
+	fileName := "json/"
+	if !sh.Test("dir", fileName) {
+		sh.Command("mkdir", fileName).Run()
 	}
-
-	authJSON, err := json.Marshal(authConfig)
-	if err != nil {
-		panic(err)
+	fileName += imageName + "/"
+	if !sh.Test("dir", fileName) {
+		sh.Command("mkdir", fileName).Run()
 	}
-
-	authStr := base64.URLEncoding.EncodeToString(authJSON)
-
-	// Combine username and password with a colon separator and convert to base64
-	//authStr := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
-
-	options := types.ImagePushOptions{
-		RegistryAuth: authStr,
+	fileName += dockerTag[len(repo):]
+	fileName += ".json"
+	args := []interface{}{
+		"image",
+		"-f",
+		"json",
+		"-o",
+		fileName,
+		dockerTag,
 	}
-
-	resp, err := cli.ImagePush(ctx, imageName, options)
-	if err != nil {
-		fmt.Println("culprit")
-		panic(err)
-	}
-
-	defer resp.Close()
-	fmt.Println("Pushing Image...")
-	_, err = io.Copy(os.Stdout, resp)
+	data, err := sh.Command("trivy", args...).Output()
 
 	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Image Push complete")
-}
-
-func deleteImage(ctx context.Context, cli *client.Client, imageName string) {
-	resp, err := cli.ImageRemove(ctx, imageName, types.ImageRemoveOptions{PruneChildren: true})
-	if err != nil {
-		fmt.Errorf("%v", err.Error())
+		fmt.Println(err)
 		return
 	}
-	for _, re := range resp {
-		fmt.Println(re)
+	fmt.Println(string(data))
+
+	/*fmt.Println("Check file name", fileName)
+	sh.Command("cat", fileName).Run()*/
+
+}
+func pushImage(imageName string) {
+	args2 := []interface{}{
+		"push",
+		imageName,
 	}
+	data, err := sh.Command("docker", args2...).Output()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(data))
 }
 
-func checkTag(tag string) bool {
+func deleteImage(imageName string) {
+	args2 := []interface{}{
+		"rmi",
+		imageName,
+	}
+	data, err := sh.Command("docker", args2...).Output()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(data))
+}
 
-	return true
+func configRemoteRepo() {
+	args := []interface{}{
+		"login",
+		"--username",
+		"sheikh-arman",
+		"--password",
+		"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",
+		"ghcr.io",
+	}
+	data, err := sh.Command("docker", args...).Output()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(data))
+}
+
+func addTag(tag string) {
+
+	cmd := sh.Command("echo", tag)
+
+	// Open the file with the "os" package and set the file to append mode (os.O_APPEND)
+	file, err := os.OpenFile("taglist.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+	cmd.Stdout = file
+	if err := cmd.Run(); err != nil {
+		fmt.Println("Error running command:", err)
+		return
+	}
+	fmt.Println(tag, " Added Successfully")
+	currentTag[tag] = 1
 }
