@@ -28,4 +28,6 @@ jobs:
     - name: Test
       run: ./myapp
     - name: List
-      run: ls
+      run: |
+        ls
+        pwd
