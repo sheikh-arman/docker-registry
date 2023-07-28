@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"gomodules.xyz/go-sh"
 	"io"
 	"net/http"
 	"os"
@@ -38,8 +39,26 @@ func init() {
 	configRemoteRepo()
 	currentTagList()
 }
+
+func configRemoteRepo() {
+	args := []interface{}{
+		"login",
+		"--username",
+		"sheikh-arman",
+		"--password",
+		"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",
+		"ghcr.io",
+	}
+	data, err := sh.Command("docker", args...).Output()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(data))
+}
+
 func currentTagList() {
-	openFile, err := os.OpenFile("taglist.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	openFile, err := os.Open("taglist.txt")
 	if err != nil {
 		return
 	}
@@ -50,6 +69,7 @@ func currentTagList() {
 		currentTag[line] = 1
 	}
 }
+
 func initBuild(app *App, imageName string) {
 	//fmt.Println(app)
 	repoUrl := app.GitRepo
@@ -182,6 +202,7 @@ func downloadFile(url, filePath string) error {
 	}
 	return nil
 }
+
 func createAssociatedFile(DockerFileUrl string) ([]string, error) {
 	localFilePath := DockerFilePath
 	localFilePath += "Dockerfile"
@@ -259,23 +280,6 @@ func deleteImage(imageName string) {
 		imageName,
 	}
 	data, err := sh.Command("docker", args2...).Output()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(string(data))
-}
-
-func configRemoteRepo() {
-	args := []interface{}{
-		"login",
-		"--username",
-		"sheikh-arman",
-		"--password",
-		"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",
-		"ghcr.io",
-	}
-	data, err := sh.Command("docker", args...).Output()
 	if err != nil {
 		fmt.Println(err)
 		return
